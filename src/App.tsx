@@ -14,24 +14,22 @@ export function App() {
   const { data: transactionsByEmployee, ...transactionsByEmployeeUtils } = useTransactionsByEmployee()
   const [isLoading, setIsLoading] = useState(false)
 
-  const transactions = useMemo(
-    () => paginatedTransactions?.data ?? transactionsByEmployee ?? null,
-    [paginatedTransactions, transactionsByEmployee]
-  )
+  const transactions = useMemo(() => {
+    return paginatedTransactions?.data ?? transactionsByEmployee ?? null
+  }, [paginatedTransactions, transactionsByEmployee])
 
   const loadAllTransactions = useCallback(async () => {
     setIsLoading(true)
     transactionsByEmployeeUtils.invalidateData()
-
     await employeeUtils.fetchAll()
-    await paginatedTransactionsUtils.fetchAll()
-
     setIsLoading(false)
+    await paginatedTransactionsUtils.fetchAll()
   }, [employeeUtils, paginatedTransactionsUtils, transactionsByEmployeeUtils])
 
   const loadTransactionsByEmployee = useCallback(
     async (employeeId: string) => {
       paginatedTransactionsUtils.invalidateData()
+      transactionsByEmployeeUtils.invalidateData()
       await transactionsByEmployeeUtils.fetchById(employeeId)
     },
     [paginatedTransactionsUtils, transactionsByEmployeeUtils]
@@ -64,8 +62,11 @@ export function App() {
             if (newValue === null) {
               return
             }
-
-            await loadTransactionsByEmployee(newValue.id)
+            if (newValue.id === "") {
+              await loadAllTransactions()
+            } else {
+              await loadTransactionsByEmployee(newValue.id)
+            }
           }}
         />
 
@@ -74,17 +75,19 @@ export function App() {
         <div className="RampGrid">
           <Transactions transactions={transactions} />
 
-          {transactions !== null && (
-            <button
-              className="RampButton"
-              disabled={paginatedTransactionsUtils.loading}
-              onClick={async () => {
-                await loadAllTransactions()
-              }}
-            >
-              View More
-            </button>
-          )}
+          {transactions !== null &&
+            paginatedTransactions !== null &&
+            paginatedTransactions.nextPage !== null && (
+              <button
+                className="RampButton"
+                disabled={paginatedTransactionsUtils.loading}
+                onClick={async () => {
+                  await loadAllTransactions()
+                }}
+              >
+                View More
+              </button>
+            )}
         </div>
       </main>
     </Fragment>
